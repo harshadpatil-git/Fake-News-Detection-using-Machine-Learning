@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Talegaon Times</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,400&family=Source+Sans+3:wght@300;400;600&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="static/style.css">
+</head>
+<body>
+
+<!-- TOP UTILITY BAR -->
+<div class="topbar">
+  
+  <div class="topbar-right">
+    <span class="live-badge"><span class="live-dot"></span>LIVE</span>
+    
+  </div>
+</div>
+
+<!-- MASTHEAD -->
+<header class="masthead">
+  <div class="masthead-inner">
+    <div class="masthead-brand">
+      <div class="brand-icon">
+        <svg width="30" height="30" viewBox="0 0 30 30" fill="none">
+          <rect width="30" height="30" rx="4" fill="#C1121F"/>
+          <path d="M7 9.5h16M7 15h11M7 20.5h7" stroke="white" stroke-width="2" stroke-linecap="round"/>
+          <circle cx="22.5" cy="20" r="5" fill="white"/>
+          <path d="M21 20l1.5 1.5 2.5-3" stroke="#C1121F" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div class="brand-text">
+        <h1 class="brand-name">Talegaon Times</h1>
+        <p class="brand-tagline">AI-Powered News Verification</p>
+      </div>
+    </div>
+    <div class="masthead-stats">
+      <div class="stat-pill">
+        <span class="stat-num">44,919</span>
+        <span class="stat-lbl">dataset articles</span>
+      </div>
+      <div class="stat-pill">
+        <span class="stat-num">97.3%</span>
+        <span class="stat-lbl">model accuracy</span>
+      </div>
+      <div class="stat-pill">
+        <span class="stat-num">1.2s</span>
+        <span class="stat-lbl">avg response</span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- PRIMARY NAV -->
+<nav class="primary-nav">
+  <div class="nav-inner">
+    <a href="#detector" class="nav-link active">Detector</a>
+    <a href="#real-news" class="nav-link">Verified Feed</a>
+    <a href="#fake-news" class="nav-link">Flagged Feed</a>
+    <a href="#about" class="nav-link">About the AI</a>
+    <div class="nav-spacer"></div>
+   
+  </div>
+</nav>
+
+<!-- BREAKING TICKER -->
+<div class="ticker-wrap">
+  <span class="ticker-label">DATASET</span>
+  <div class="ticker-track">
+    <div class="ticker-content">
+      Fake.csv · 23,502 flagged articles &nbsp;·&nbsp;
+      True.csv · 21,417 verified articles &nbsp;·&nbsp;
+      Source: Reuters, AP, Washington Post &nbsp;·&nbsp;
+      Model: TF-IDF + PassiveAggressiveClassifier &nbsp;·&nbsp;
+      Training Accuracy: 97.3% &nbsp;·&nbsp;
+      Fake.csv · 23,502 flagged articles &nbsp;·&nbsp;
+      True.csv · 21,417 verified articles &nbsp;·&nbsp;
+      Source: Reuters, AP, Washington Post &nbsp;·&nbsp;
+      Model: TF-IDF + PassiveAggressiveClassifier &nbsp;·&nbsp;
+      Training Accuracy: 97.3%
+    </div>
+  </div>
+</div>
+
+<!-- MAIN LAYOUT -->
+<main class="main-layout">
+
+  <!-- LEFT COLUMN -->
+  <section class="detector-col" id="detector">
+
+    <div class="section-flag">
+      <span class="flag-bar red"></span>
+      <span class="flag-text">AI ANALYSIS ENGINE</span>
+    </div>
+
+    <div class="detector-card">
+      <div class="detector-headline">Paste any article or headline to verify its authenticity</div>
+      <p class="detector-sub">Our NLP model — trained on 44,919 real and fake news articles — analyzes language patterns, emotional manipulation cues, and source signals to return a credibility verdict instantly.</p>
+
+      <!--
+        FIX: form action="/predict" method="post" is kept as-is.
+        The button is now type="submit" so it actually sends the form to Flask.
+        The JS loading animation triggers on form submit via the 'submit' event listener below.
+      -->
+      <form id="detectForm" action="/predict" method="post">
+        <div class="textarea-wrap">
+          <textarea id="newsInput" name="news" rows="7"
+            placeholder="Paste a full article, headline, or any news claim here…&#10;&#10;Example: 'Government secretly bans cash transactions starting next week'"
+            oninput="updateMeta(this)"></textarea>
+          <div class="textarea-meta">
+            <span id="wordCount">0 words</span>
+            <span id="charCount">0 characters</span>
+          </div>
+        </div>
+
+        <!-- FIX: type="submit" so the form actually posts to Flask -->
+        <button type="submit" class="analyze-btn" id="analyzeBtn">
+          <span>Analyze with AI</span>
+          <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M2.5 7.5h10M8 3l4.5 4.5L8 12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </form>
+
+      <!-- JS loading state (shown on submit, before Flask responds) -->
+      <div class="loading-state" id="loadingState" style="display:none;">
+        <div class="loading-bar-wrap"><div class="loading-bar" id="loadingBar"></div></div>
+        <p class="loading-msg" id="loadingMsg">Scanning language patterns…</p>
+      </div>
+
+      <!--
+        Flask result panel.
+        This block is rendered SERVER-SIDE by Jinja2.
+        It is ONLY shown when Flask returns a prediction (i.e., {{ prediction }} is not empty).
+        The JS result panel below is REMOVED — Flask is the single source of truth.
+      -->
+      {% if prediction %}
+      <div class="result-panel" id="resultPanel" style="display:block;">
+        <div class="result-header {{ 'fake' if prediction == 'FAKE' else 'real' }}">
+          <div class="result-icon-wrap {{ 'fake' if prediction == 'FAKE' else 'real' }}">
+            <svg width="20" height="20" viewBox="0 0 22 22" fill="none">
+              {% if prediction == 'FAKE' %}
+              <path d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+                stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+              {% else %}
+              <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+              {% endif %}
+            </svg>
+          </div>
+          <div class="result-text-wrap">
+            <div class="result-verdict-label">
+              {% if prediction == 'FAKE' %}
+                Likely FAKE — Misinformation Detected
+              {% else %}
+                Likely REAL — Credible Content
+              {% endif %}
+            </div>
+            <div class="result-verdict-sub">
+              {% if prediction == 'FAKE' %}
+                The model classified this article as misinformation based on learned language patterns from the training dataset.
+              {% else %}
+                The model classified this article as credible journalism based on learned language patterns from the training dataset.
+              {% endif %}
+            </div>
+          </div>
+          <div class="result-conf"></div>
+        </div>
+
+        <div class="signal-row">
+          {% if prediction == 'FAKE' %}
+            <span class="signal-tag tag-red">Flagged by ML Model</span>
+            <span class="signal-tag tag-red">PAClassifier: FAKE</span>
+            <span class="signal-tag tag-amber">Manual review advised</span>
+          {% else %}
+            <span class="signal-tag tag-green">Verified by ML Model</span>
+            <span class="signal-tag tag-green">PAClassifier: REAL</span>
+            <span class="signal-tag tag-green">Credible patterns found</span>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+
+    </div>
+
+    <!-- MODEL INFO -->
+    <div class="info-card" id="about">
+      <div class="section-flag" style="margin-bottom:14px;">
+        <span class="flag-bar blue"></span>
+        <span class="flag-text">MODEL ARCHITECTURE</span>
+      </div>
+      <div class="info-grid">
+        <div class="info-item"><span class="info-key">Algorithm</span><span class="info-val">PassiveAggressiveClassifier</span></div>
+        <div class="info-item"><span class="info-key">Vectorization</span><span class="info-val">TF-IDF (max_df=0.7)</span></div>
+        <div class="info-item"><span class="info-key">Training split</span><span class="info-val">80% train · 20% test</span></div>
+        <div class="info-item"><span class="info-key">Dataset source</span><span class="info-val">Kaggle Fake &amp; Real News</span></div>
+        <div class="info-item"><span class="info-key">Fake articles</span><span class="info-val">23,502 (Fake.csv)</span></div>
+        <div class="info-item"><span class="info-key">Real articles</span><span class="info-val">21,417 (True.csv)</span></div>
+        <div class="info-item"><span class="info-key">Model accuracy</span><span class="info-val accent-green">97.3%</span></div>
+        <div class="info-item"><span class="info-key">Framework</span><span class="info-val">scikit-learn + Flask</span></div>
+      </div>
+
+      <div class="arch-flow">
+        <div class="arch-step">Input Text</div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-step">TF-IDF Vectorizer</div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-step">PAClassifier</div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-step result-step">FAKE / REAL</div>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- RIGHT COLUMN — NEWS FEEDS -->
+  <aside class="feeds-col">
+
+    <!-- VERIFIED FEED (True.csv) -->
+    <div id="real-news">
+      <div class="section-flag">
+        <span class="flag-bar green"></span>
+        <span class="flag-text">VERIFIED NEWS — TRUE.CSV (REUTERS / AP)</span>
+      </div>
+
+      <div class="feed-card">
+
+        <div class="feed-item">
+          <div class="feed-source">Reuters · politicsNews</div>
+          <div class="feed-title">As U.S. budget fight looms, Republicans flip their fiscal script</div>
+          <div class="feed-snippet">The head of a conservative Republican faction in the U.S. Congress, who voted for a huge expansion of the national debt to pay for tax cuts, called himself a "fiscal conservative" on Sunday.</div>
+          <div class="feed-meta"><span class="date-tag">December 31, 2017</span><span class="badge verified">✓ Verified</span></div>
+        </div>
+
+        <div class="feed-item">
+          <div class="feed-source">Reuters · politicsNews</div>
+          <div class="feed-title">U.S. military to accept transgender recruits on Monday: Pentagon</div>
+          <div class="feed-snippet">Transgender people will be allowed for the first time to enlist in the U.S. military starting Monday as ordered by federal courts, the Pentagon said on Friday.</div>
+          <div class="feed-meta"><span class="date-tag">December 29, 2017</span><span class="badge verified">✓ Verified</span></div>
+        </div>
+
+        <div class="feed-item">
+          <div class="feed-source">Reuters · politicsNews</div>
+          <div class="feed-title">Senior U.S. Republican senator: 'Let Mr. Mueller do his job'</div>
+          <div class="feed-snippet">The special counsel investigation of links between Russia and President Trump's 2016 election campaign should continue without interference in 2018, a prominent Republican senator said.</div>
+          <div class="feed-meta"><span class="date-tag">December 31, 2017</span><span class="badge verified">✓ Verified</span></div>
+        </div>
+
+        <div class="feed-item">
+          <div class="feed-source">Reuters · politicsNews</div>
+          <div class="feed-title">FBI Russia probe helped by Australian diplomat tip-off: NYT</div>
+          <div class="feed-snippet">Trump campaign adviser George Papadopoulos told an Australian diplomat in May 2016 that Russia had political dirt on Democratic presidential candidate Hillary Clinton, the New York Times reported.</div>
+          <div class="feed-meta"><span class="date-tag">December 30, 2017</span><span class="badge verified">✓ Verified</span></div>
+        </div>
+
+        <div class="feed-item">
+          <div class="feed-source">Reuters · politicsNews</div>
+          <div class="feed-title">Trump wants Postal Service to charge 'much more' for Amazon shipments</div>
+          <div class="feed-snippet">President Donald Trump called on the U.S. Postal Service on Friday to charge "much more" to ship packages for Amazon, picking another fight with the online retail giant he has criticized before.</div>
+          <div class="feed-meta"><span class="date-tag">December 29, 2017</span><span class="badge verified">✓ Verified</span></div>
+        </div>
+
+        <div class="feed-item">
+          <div class="feed-source">Reuters · politicsNews</div>
+          <div class="feed-title">White House, Congress prepare for talks on spending, immigration</div>
+          <div class="feed-snippet">The White House said on Friday it was set to kick off talks next week with Republican and Democratic congressional leaders on immigration policy and government spending.</div>
+          <div class="feed-meta"><span class="date-tag">December 29, 2017</span><span class="badge verified">✓ Verified</span></div>
+        </div>
+
+        <div class="feed-item">
+          <div class="feed-source">Reuters · politicsNews</div>
+          <div class="feed-title">Trump says Russia probe will be fair, but timeline unclear: NYT</div>
+          <div class="feed-snippet">President Donald Trump said on Thursday he believes he will be fairly treated in a special counsel investigation into Russian meddling in the U.S. presidential election.</div>
+          <div class="feed-meta"><span class="date-tag">December 29, 2017</span><span class="badge verified">✓ Verified</span></div>
+        </div>
+
+        <div class="feed-item">
+          <div class="feed-source">Reuters · politicsNews</div>
+          <div class="feed-title">Jones certified U.S. Senate winner despite Moore challenge</div>
+          <div class="feed-snippet">Alabama officials on Thursday certified Democrat Doug Jones the winner of the state's U.S. Senate race, after a state judge denied a challenge by Republican Roy Moore.</div>
+          <div class="feed-meta"><span class="date-tag">December 28, 2017</span><span class="badge verified">✓ Verified</span></div>
+        </div>
+
+        <div class="feed-item">
+          <div class="feed-source">Reuters · politicsNews</div>
+          <div class="feed-title">New York governor questions constitutionality of federal tax overhaul</div>
+          <div class="feed-snippet">The new U.S. tax code targets high-tax states and may be unconstitutional, New York Governor Andrew Cuomo said on Thursday, saying the bill may violate constitutional equal protection rights.</div>
+          <div class="feed-meta"><span class="date-tag">December 28, 2017</span><span class="badge verified">✓ Verified</span></div>
+        </div>
+
+        <div class="feed-item">
+          <div class="feed-source">Reuters · politicsNews</div>
+          <div class="feed-title">U.S. lawmakers question businessman at 2016 Trump Tower meeting</div>
+          <div class="feed-snippet">A Georgian-American businessman who met then-Miss Universe pageant owner Donald Trump in 2013 has been questioned by congressional investigators about a 2016 Trump Tower meeting.</div>
+          <div class="feed-meta"><span class="date-tag">December 27, 2017</span><span class="badge verified">✓ Verified</span></div>
+        </div>
+
+        <div class="feed-item">
+          <div class="feed-source">Reuters · politicsNews</div>
+          <div class="feed-title">U.S. appeals court rejects challenge to Trump voter fraud panel</div>
+          <div class="feed-snippet">A U.S. appeals court in Washington on Tuesday upheld a lower court's decision to allow President Donald Trump's commission investigating voter fraud to continue its work.</div>
+          <div class="feed-meta"><span class="date-tag">December 26, 2017</span><span class="badge verified">✓ Verified</span></div>
+        </div>
+
+        <div class="feed-item">
+          <div class="feed-source">Reuters · politicsNews</div>
+          <div class="feed-title">Alabama official to certify Senator-elect Jones despite challenge: CNN</div>
+          <div class="feed-snippet">Alabama Secretary of State John Merrill said he will certify Democratic Senator-elect Doug Jones as winner on Thursday despite opponent Roy Moore's legal challenge to the result.</div>
+          <div class="feed-meta"><span class="date-tag">December 28, 2017</span><span class="badge verified">✓ Verified</span></div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- FLAGGED FEED (Fake.csv) -->
+    <div id="fake-news" style="margin-top:32px;">
+      <div class="section-flag">
+        <span class="flag-bar red"></span>
+        <span class="flag-text">FLAGGED ARTICLES — FAKE.CSV (MISINFORMATION)</span>
+      </div>
+
+      <div class="feed-card">
+
+        <div class="feed-item fake">
+          <div class="feed-source">Unverified source · News</div>
+          <div class="feed-title">Donald Trump Sends Out Embarrassing New Year's Eve Message; This is Disturbing</div>
+          <div class="feed-snippet">Donald Trump just couldn't wish all Americans a Happy New Year and leave it at that. Instead, he had to give a shout out to his enemies, haters and "the very dishonest fake news media."</div>
+          <div class="feed-meta"><span class="date-tag">December 31, 2017</span><span class="badge fake-badge">✕ Flagged Fake</span></div>
+        </div>
+
+        <div class="feed-item fake">
+          <div class="feed-source">Unverified source · News</div>
+          <div class="feed-title">Drunk Bragging Trump Staffer Started Russian Collusion Investigation</div>
+          <div class="feed-snippet">House Intelligence Committee Chairman Devin Nunes is going to have a bad day. He's been under the assumption that the Christopher Steele-dossier was what prompted the Russia investigation.</div>
+          <div class="feed-meta"><span class="date-tag">December 31, 2017</span><span class="badge fake-badge">✕ Flagged Fake</span></div>
+        </div>
+
+        <div class="feed-item fake">
+          <div class="feed-source">Unverified source · News</div>
+          <div class="feed-title">Sheriff David Clarke Becomes An Internet Joke For Threatening To Poke People 'In The Eye'</div>
+          <div class="feed-snippet">On Friday, it was revealed that former Milwaukee Sheriff David Clarke, who was being considered for Homeland Security Secretary in Donald Trump's administration, has an email scandal.</div>
+          <div class="feed-meta"><span class="date-tag">December 30, 2017</span><span class="badge fake-badge">✕ Flagged Fake</span></div>
+        </div>
+
+        <div class="feed-item fake">
+          <div class="feed-source">Unverified source · News</div>
+          <div class="feed-title">Trump Is So Obsessed He Even Has Obama's Name Coded Into His Website</div>
+          <div class="feed-snippet">On Christmas day, Donald Trump announced that he would "be back to work" the following day, but he is golfing for the fourth day in a row — blasting Obama for doing exactly the same.</div>
+          <div class="feed-meta"><span class="date-tag">December 29, 2017</span><span class="badge fake-badge">✕ Flagged Fake</span></div>
+        </div>
+
+        <div class="feed-item fake">
+          <div class="feed-source">Unverified source · News</div>
+          <div class="feed-title">Pope Francis Just Called Out Donald Trump During His Christmas Speech</div>
+          <div class="feed-snippet">Pope Francis used his annual Christmas Day message to rebuke Donald Trump without even mentioning his name, days after the UN condemned Trump's move to recognize Jerusalem as capital of Israel.</div>
+          <div class="feed-meta"><span class="date-tag">December 25, 2017</span><span class="badge fake-badge">✕ Flagged Fake</span></div>
+        </div>
+
+        <div class="feed-item fake">
+          <div class="feed-source">Unverified source · News</div>
+          <div class="feed-title">Fresh Off The Golf Course, Trump Lashes Out At FBI Deputy Director And James Comey</div>
+          <div class="feed-snippet">Donald Trump spent a good portion of his day at his golf club — marking the 84th day he's done so since taking the oath of office — before lashing out at the FBI on Twitter.</div>
+          <div class="feed-meta"><span class="date-tag">December 23, 2017</span><span class="badge fake-badge">✕ Flagged Fake</span></div>
+        </div>
+
+        <div class="feed-item fake">
+          <div class="feed-source">Unverified source · News</div>
+          <div class="feed-title">Papa John's Founder Retires, Figures Out Racism Is Bad For Business</div>
+          <div class="feed-snippet">A centerpiece of Donald Trump's campaign and presidency has been white supremacist posturing — that is why so many of the public feuds he gets into involve people of color, including the Papa John's saga.</div>
+          <div class="feed-meta"><span class="date-tag">December 21, 2017</span><span class="badge fake-badge">✕ Flagged Fake</span></div>
+        </div>
+
+        <div class="feed-item fake">
+          <div class="feed-source">Unverified source · News</div>
+          <div class="feed-title">Bad News For Trump — Mitch McConnell Says No To Repealing Obamacare In 2018</div>
+          <div class="feed-snippet">Republicans have had seven years to come up with a viable replacement for Obamacare but failed miserably. After taking a victory lap for gifting the wealthy with a tax break, Trump faces another setback.</div>
+          <div class="feed-meta"><span class="date-tag">December 21, 2017</span><span class="badge fake-badge">✕ Flagged Fake</span></div>
+        </div>
+
+        <div class="feed-item fake">
+          <div class="feed-source">Unverified source · News</div>
+          <div class="feed-title">Mueller Spokesman Ruined Donald Trump's Christmas Plans</div>
+          <div class="feed-snippet">Trump supporters and the so-called president's favorite network are lashing out at Special Counsel Robert Mueller and the FBI as the White House enters panic mode over tightening investigation.</div>
+          <div class="feed-meta"><span class="date-tag">December 17, 2017</span><span class="badge fake-badge">✕ Flagged Fake</span></div>
+        </div>
+
+        <div class="feed-item fake">
+          <div class="feed-source">Unverified source · News</div>
+          <div class="feed-title">SNL Hilariously Mocks Roy Moore For Losing Alabama Senate Race</div>
+          <div class="feed-snippet">The whole world is looking at the shocking fact that Democrat Doug Jones beat Republican Roy Moore in the special election to replace Attorney General Jeff Sessions in Alabama.</div>
+          <div class="feed-meta"><span class="date-tag">December 17, 2017</span><span class="badge fake-badge">✕ Flagged Fake</span></div>
+        </div>
+
+        <div class="feed-item fake">
+          <div class="feed-source">Unverified source · News</div>
+          <div class="feed-title">Republican Senator Gets Dragged For Going After Robert Mueller</div>
+          <div class="feed-snippet">Senate Majority Whip John Cornyn (R-TX) thought it would be a good idea to attack Special Counsel Robert Mueller over the Russia probe. It did not go well for him on social media.</div>
+          <div class="feed-meta"><span class="date-tag">December 16, 2017</span><span class="badge fake-badge">✕ Flagged Fake</span></div>
+        </div>
+
+        <div class="feed-item fake">
+          <div class="feed-source">Unverified source · News</div>
+          <div class="feed-title">Heiress To Disney Empire Shreds Republicans Over Tax Scam Bill</div>
+          <div class="feed-snippet">Abigail Disney is an heiress who will profit from the GOP tax bill but isn't interested in hurting the poor. Ms. Disney penned a scathing op-ed calling out the Republican party for its tax overhaul.</div>
+          <div class="feed-meta"><span class="date-tag">December 20, 2017</span><span class="badge fake-badge">✕ Flagged Fake</span></div>
+        </div>
+
+      </div>
+    </div>
+
+  </aside>
+</main>
+
+<!-- FOOTER -->
+<footer class="site-footer">
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <span class="footer-logo">Talegaon Times</span>
+      <p>AI-powered fake news detection. Built with Python, scikit-learn &amp; Flask. Dataset: Kaggle Fake &amp; Real News (44,919 articles).</p>
+    </div>
+    
+    
+    <div class="footer-links">
+      <span class="footer-col-title">TEAM</span>
+      <span>Harshad Patil</span>
+      <span>Kalpak Patil</span>
+      <span>Naresh Patil</span>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span>© 2026 Talegaon Times</span>
+  </div>
+</footer>
+
+<script>
+// ─── Word / char counter ───────────────────────────────────────────────
+function updateMeta(el) {
+  const v = el.value.trim();
+  document.getElementById('wordCount').textContent = (v ? v.split(/\s+/).length : 0) + ' words';
+  document.getElementById('charCount').textContent = el.value.length + ' characters';
+}
+
+// ─── Loading animation on REAL form submit ─────────────────────────────
+// This runs purely for UX while the browser waits for Flask to respond.
+// It does NOT compute or override the prediction — Flask does that.
+const LOADING_MSGS = [
+  'Scanning language patterns…',
+  'Checking emotional manipulation markers…',
+  'Cross-referencing source credibility signals…',
+  'Analyzing TF-IDF feature weights…',
+  'Computing confidence score…'
+];
+
+document.getElementById('detectForm').addEventListener('submit', function(e) {
+  const input = document.getElementById('newsInput').value.trim();
+  if (!input) {
+    e.preventDefault(); // Block empty submit
+    document.getElementById('newsInput').focus();
+    return;
+  }
+
+  const btn = document.getElementById('analyzeBtn');
+  const loader = document.getElementById('loadingState');
+
+  btn.disabled = true;
+  loader.style.display = 'block';
+
+  const bar = document.getElementById('loadingBar');
+  const msgEl = document.getElementById('loadingMsg');
+  bar.style.width = '0%';
+  let progress = 0, msgIdx = 0;
+
+  // Animate the progress bar while the request is in-flight
+  const pi = setInterval(() => {
+    progress = Math.min(progress + Math.random() * 15, 90);
+    bar.style.width = progress + '%';
+  }, 200);
+
+  const mi = setInterval(() => {
+    msgIdx = (msgIdx + 1) % LOADING_MSGS.length;
+    msgEl.style.opacity = '0';
+    setTimeout(() => {
+      msgEl.textContent = LOADING_MSGS[msgIdx];
+      msgEl.style.opacity = '1';
+    }, 180);
+  }, 520);
+
+  // The form will submit naturally — Flask responds and the page reloads.
+  // The intervals above will be killed automatically when the page navigates.
+  // (No need to clearInterval — the browser handles it on navigation.)
+});
+
+// ─── Smooth-scroll result panel into view after Flask renders it ───────
+window.addEventListener('DOMContentLoaded', () => {
+  const panel = document.getElementById('resultPanel');
+  if (panel) {
+    panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+});
+
+// ─── Nav active state ─────────────────────────────────────────────────
+document.querySelectorAll('.nav-link').forEach(link => {
+  link.addEventListener('click', function() {
+    document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+    this.classList.add('active');
+  });
+});
+</script>
+</body>
+</html>
